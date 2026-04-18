@@ -1,4 +1,4 @@
-The app is available online at [https://d21uzvmnmnz3ef.cloudfront.net](https://d21uzvmnmnz3ef.cloudfront.net)
+The app is available online at https://d21uzvmnmnz3ef.cloudfront.net
 
 # EncNotes - Encrypted Notes
 
