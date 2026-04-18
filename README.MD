@@ -1,9 +1,10 @@
+The app is available online at [https://d21uzvmnmnz3ef.cloudfront.net](https://d21uzvmnmnz3ef.cloudfront.net)
+
 # EncNotes - Encrypted Notes
 
 ## 1. Overview
 
 EncNotes is a serverless web application built with AWS, React, and WebSockets. The application allows authenticated users to add, edit, delete and list notes through a web-based interface, isolated with a different encryption key per user.  
-The application is available online at [https://d21uzvmnmnz3ef.cloudfront.net](https://d21uzvmnmnz3ef.cloudfront.net)
 
 ## 2. Architecture Components
 
