@@ -16,7 +16,7 @@ No server runs between requests; a function runs only when a REST call, a WebSoc
 disconnect, a change to the notes table or a queued notice triggers it. A REST call wakes one
 Node.js function, which gets the caller's data key, encrypts or decrypts a note, reads or writes
 DynamoDB, and queues a notice for the caller's open WebSocket connections; a second function
-posts those notices. The stack is one SAM template ([ADR 0003](adr/0003-serverless-with-sam.md)).
+posts those notices. The stack is one SAM template (ADR 0003).
 
 ```mermaid
 graph LR
@@ -49,7 +49,7 @@ graph LR
   client, with the authorization-code flow, Google as its only identity provider, and the
   CloudFront address and `http://localhost:3000` as its sign-in and sign-out URLs. The browser
   signs in with Amplify's redirect to Google through Cognito and sends the ID token as a bearer
-  token ([ADR 0004](adr/0004-google-sign-in-through-shared-cognito-pool.md)).
+  token (ADR 0004).
   [Sign-in](sign-in.md) details the flow and its setup in a new account.
 - **REST API** (`RESTApi`) — its Cognito authorizer checks the token on every route. The stage is
   `prod` for the `en` stack and `dev` for `en-fb`. The routes, one function each, under
@@ -65,17 +65,15 @@ graph LR
   - `DELETE /delete/{id}` (`DeleteNoteFunction`) — deletes the item; the stream processor puts
     it back as archived.
 
-  Update and delete address a note by its id alone; they do not check that the note belongs to
-  the caller. After its write, each writing function (add, update, delete) reads the caller's
-  connection ids from Redis and queues one notice per connection.
+  After its write, each writing function (add, update, delete) reads the caller's connection ids
+  from Redis and queues one notice per connection.
 - **NotesStreamProcessor** (`backend/notes/stream/`) — reads the notes table's stream, which
   carries each item's image before the change, and keeps the archive (below).
-- **WebSocket API** (`WebSocketApi`) — the browser connects with its ID token in the `token`
-  query parameter. `ConnectFunction` (`backend/websocket/connect/`) reads the user id from the
-  token's `sub` claim, without checking the token's signature, and records the connection in
-  Redis; `DisconnectFunction` removes it. No other route exists. The stage writes access logs to
-  a log group of the stack and needs the account's API Gateway logging role, which
-  `aws-helper.sh --apigateway-logging-role` sets up once
+- **WebSocket API** (`WebSocketApi`) — the browser connects with its ID token in the `token` query
+  parameter. `ConnectFunction` (`backend/websocket/connect/`) reads the user id from the token's
+  `sub` claim and records the connection in Redis; `DisconnectFunction` removes it. No other route
+  exists. The stage writes access logs to a log group of the stack and needs the account's API
+  Gateway logging role, which `aws-helper.sh --apigateway-logging-role` sets up once
   (`scripts/apigateway-logging-role.yaml`).
 - **SQS queue** (`MessagesToWebsocketsQueue`) — a FIFO queue with content-based deduplication;
   every notice goes to one message group, so notices are delivered in the order they were sent.
@@ -91,11 +89,11 @@ graph LR
 ## Encryption of a note
 
 One KMS key, the notes key, wraps one data key per user
-([ADR 0001](adr/0001-per-user-data-keys.md)). `getUserDataKey` in the encryption layer returns
+(ADR 0001). `getUserDataKey` in the encryption layer returns
 the caller's plaintext data key:
 
 1. It reads `DEK(<user id>)` from Redis and returns the key on a hit
-   ([ADR 0002](adr/0002-cache-data-keys-in-redis.md)).
+   (ADR 0002).
 2. On a miss it reads the user's item from the users table and asks KMS to decrypt its
    `encryptedDEK`, then writes the plaintext key to Redis.
 3. A user with no item gets a new 256-bit key from KMS `GenerateDataKey`; the plaintext goes to
@@ -133,9 +131,9 @@ so the archive only grows.
 - **Shared resources.** The notes and users tables and the notes key belong to no stack:
   `stack-params.sh` passes their names to both branch stacks, so both read and write the same
   notes. The template can create each of them instead, when its parameter is empty.
-- **Redis.** Redis runs on the account's shared database host, an EC2 instance outside this
-  stack, reached at its public DNS name with a password and without TLS. The networking
-  parameters of the template are left empty, so the functions run outside any VPC.
+- **Redis.** Redis runs on the account's shared database host, an EC2 instance outside this stack,
+  reached with a password. The networking parameters of the template are left empty, so the
+  functions run outside any VPC.
 - **CORS.** The functions answer with the origin of `ALLOWED_ORIGIN`: the CloudFront address on
   the `en` stack, any origin on `en-fb`. The REST API's own preflight and error responses allow
   any origin.

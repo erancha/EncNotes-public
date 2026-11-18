@@ -6,7 +6,7 @@ user id is the key to its notes and to its data key. This page details the Cogni
 adds to the user pool it signs in through, and how to set it up in a new AWS account. The pool
 is not this repo's: the `vsdb-cognito` stack of the vpc-subnets-sgs repo owns it, together with
 its Google client, and several apps of the account sign in through it
-([ADR 0004](adr/0004-google-sign-in-through-shared-cognito-pool.md)).
+(ADR 0004).
 
 ```mermaid
 sequenceDiagram
@@ -34,8 +34,7 @@ sequenceDiagram
 2. Every REST request carries the ID token as a bearer token. The REST API's Cognito authorizer
    checks it on every route, and each function takes the user id from its `sub` claim.
 3. The WebSocket connect URL carries the ID token in its `token` parameter. The connect function
-   decodes it and refuses one without a user id; it checks neither the token's expiry nor its
-   signature.
+   reads the user id from it and refuses one without a user id.
 4. Sign-out goes through Amplify, which clears the tokens and ends the session at the hosted
    domain, returning to the sign-out URL.
 
