@@ -77,37 +77,25 @@ graph LR
     X -->|change notice| WS
 ```
 
-**[Architecture](docs/architecture.md)** continues from here: the full diagram, each function,
-route, table and Redis key, how a note is encrypted, how the archive is kept, and the
-configuration each part reads.
+**[Architecture](docs/architecture.md)** continues from here: the full diagram, what each
+function, queue and table is for, and how a note is encrypted and archived, each with a link to
+the document that holds its detail.
 
 ## Getting started
 
-You need bash, git, the AWS CLI v2, the AWS SAM CLI, jq and Node.js with npm.
+You need bash, git, the AWS CLI v2, the AWS SAM CLI, `jq` and Node.js with `npm`.
+The stack deploys into an AWS account that already runs the user pool and the database host
+of the vpc-subnets-sgs repository ([Setting up Google](docs/sign-in.md#setting-up-google)).
 
-1. Clone with the encryption layer, a git submodule the SAM build packages:
-   `git clone --recurse-submodules https://github.com/erancha/EncNotes.git` (in an existing
-   clone, `git submodule update --init --recursive`).
-2. Run `./scripts/init-env.sh`, which creates `scripts/lib/aws-config.sh` and `secrets.sh` from
-   their `.example.sh` files; fill in the AWS credentials and region, and the Redis
-   password (in this account, `REDIS_PASSWORD` of the `vpc-subnets-sgs` repo's database
-   settings). Both copies are gitignored, and the scripts refuse to run while git would track
-   them.
-3. Check `scripts/lib/stack-params.sh`, which names the resources the stack uses from outside.
-   These must already exist: a Cognito user pool with a hosted domain and Google as an identity
-   provider (a fresh account starts there: [Sign-in](docs/sign-in.md#setting-up-google)), and a
-   Redis reachable from Lambda over the internet with a password. The notes and
-   users tables and the KMS key are shared by both branch stacks; an empty name makes the stack
-   create that one instead.
-4. Once per account and region, run `./scripts/aws-helper.sh --apigateway-logging-role`, so the
-   WebSocket stage may write its logs to CloudWatch.
-5. Run `./scripts/deploy.sh --frontend`. It deploys the stack, writes the browser's settings file
-   from the stack's outputs, builds and publishes the React app, and prints its CloudFront
-   address. The git branch selects the stack: `main` deploys `en`, any other branch `en-fb`.
-6. To run the browser app locally against that stack, run `npm start` in `frontend/enc-notes/`
-   and open `http://localhost:3000`.
+1. `./scripts/init-env.sh` creates the gitignored settings files under `scripts/lib/`; fill
+   them in.
+2. `./scripts/test.sh` runs every check, with no AWS access.
+3. `./scripts/deploy.sh --frontend` deploys the stack and the frontend and prints its address;
+   `main` deploys `en`, any other branch `en-fb`.
+4. `npm install && npm start` in `frontend/enc-notes/` serves `http://localhost:3000` against the
+   branch's stack.
 
-[Development & deployment](docs/development.md) has the details.
+[Development & deployment](docs/development.md) lists every prerequisite and step.
 
 ## Scripts
 
@@ -124,9 +112,14 @@ Each script's header comment is its full documentation, and `--help` prints it.
 
 ## Details
 
-- [Architecture](docs/architecture.md) — what each part is for, how a note is encrypted and
-  archived, the storage layout and the codebase
-- [Development & deployment](docs/development.md) — the settings files, the tests, the
-  scripts, what the stack expects in the account, and the layers
+- [Architecture](docs/architecture.md) — what each part is for, the storage and the codebase
+- [API endpoints](docs/api.md) — each REST and WebSocket route, who may call it, what it answers
+- [Workers' responsibilities and flows](docs/workers.md) — what the stream processor and the
+  queue's function do, with their limits
+- [Domain rules](docs/domain-rules.md) — how a note is encrypted and how it is archived
+- [Design patterns](docs/design-patterns.md) — the shared layers, settings, network and CORS
+- [Data model](docs/data-model.md) — every table, index, Redis key and the frontend bucket
 - [Sign-in](docs/sign-in.md) — how Google sign-in reaches the APIs through the shared pool, and
   its setup in a new account
+- [Development & deployment](docs/development.md) — the settings files, the tests, the
+  scripts, what the stack expects in the account, and the layers

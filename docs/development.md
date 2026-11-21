@@ -47,7 +47,7 @@ Every other setting is committed in `scripts/lib/stack-params.sh`, which lists e
 the stack is deployed with: `sam deploy` keeps a stack's previous value for any parameter the
 overrides leave out. The parameters it leaves out stay at their template defaults: the
 networking, CORS and custom domain parameters. The app's name (`en`), its region and the log
-retention (14 days) are in `scripts/lib/app-env.sh`.
+retention are in `scripts/lib/app-env.sh`.
 
 Which run a change needs: `scripts/template.yaml`, a settings file, a function or a layer takes
 `./scripts/deploy.sh`; the React app takes `./scripts/deploy.sh --frontend-only`; both take
@@ -71,10 +71,11 @@ Install the AWS CLI v2, the AWS SAM CLI, Node.js with npm, `jq` and git, each on
 `deploy.sh` stops naming the first one missing.
 
 No script takes an environment argument. The git branch selects the stack every script acts on:
-`main` targets `en`, with the REST and WebSocket stage `prod` and CORS restricted to the
-CloudFront address; any other branch `en-fb`, with stage `dev` and CORS open to any origin. An
-exported `STACK_NAME` wins. Both stacks share the notes and users tables and the notes key, so
-a feature branch works on the same notes as `main`.
+`main` targets `en` (stage `prod` of both APIs), any other branch `en-fb` (stage `dev`); an
+exported `STACK_NAME` wins. The two stacks differ in the origin they allow
+([The allowed origin depends on the stack](design-patterns.md#the-allowed-origin-depends-on-the-stack)),
+and work on the same notes
+([Settings come from the template and the stack's outputs](design-patterns.md#settings-come-from-the-template-and-the-stacks-outputs)).
 
 - `deploy.sh` — validates and lints `scripts/template.yaml`, runs
   `sam build --cached --parallel`, which rebuilds only the functions whose source changed, then
@@ -107,8 +108,8 @@ A deploy depends on parts no script of this repo creates, which `stack-params.sh
   pool; [Sign-in](sign-in.md#setting-up-google) covers the pool in a new account.
 - Redis on the account's shared database host, run by the vpc-subnets-sgs repository, reached
   by the host's public name with the password of `secrets.sh`.
-- The notes and users tables and the notes KMS key, which belong to no stack and so outlive any
-  deploy or delete. An empty name in `stack-params.sh` makes the stack create that one instead.
+- The notes and users tables and the notes KMS key, which belong to no stack
+  ([Settings come from the template and the stack's outputs](design-patterns.md#settings-come-from-the-template-and-the-stacks-outputs)).
 - The account's API Gateway CloudWatch role, set once per account and region with
   `./scripts/aws-helper.sh --apigateway-logging-role`, so the WebSocket stage may write logs.
 
@@ -120,16 +121,13 @@ package; a change to it is made in its own repository.
 
 The AWS SDK v3, ioredis and jsonwebtoken layers deploy from the zips committed in
 `backend/layers/`; no script rebuilds them, so a change to a `nodejs/package.json` there
-reaches Lambda only after its zip is rebuilt by hand. The layers mount under `/opt/` in Lambda,
-so a function requires them by that path, for example `require('/opt/corsHeaders')`.
-
-`EnableUserDataKeysCache` is a template parameter nothing reads; the data key cache is on
-whenever `ExistingRedisAddress` is set.
+reaches Lambda only after its zip is rebuilt by hand. Which layers there are and how a function
+loads one is in [Shared code lives in layers](design-patterns.md#shared-code-lives-in-layers).
 
 ## Logs
 
-Each function writes to `/aws/lambda/<stack>/<logical id>`, a log group the template declares
-and keeps for 14 days, so a deploy leaves the logs alone; `aws-helper.sh --delete-stack`
-deletes them with the stack.
+Each function writes to a log group the template declares, named and kept as
+[The entry points](architecture.md#the-entry-points) states, so a deploy leaves the logs alone;
+`aws-helper.sh --delete-stack` deletes them with the stack.
 `./scripts/aws-helper.sh --logs <function> --since 1d --errors` shows one function's warnings
 and errors; `--trim-logs` deletes the stack's log streams on request.
